@@ -16,12 +16,12 @@
 
 ### 1. 导入 UnityPackage
 最简单的方法是直接使用预编译好的包：
-1. 前往本仓库的 **Releases** 页面。
+1. 前往本仓库的 [Releases](https://github.com/z7572/TextMeshPro-1.0.55.56.0b9/releases) 页面。
 2. 下载 `TextMeshPro-1.0.55.56.0b9.unitypackage` 。
 3. 打开 **Unity 5.6.3p4** 创建一个全新的空 3D 项目。
-4. 将下载的 `.unitypackage` 直接拖入 Unity 中，导入全部内容。
+4. 将下载的 `.unitypackage` 直接拖入 Unity 中或手动导入该包，导入全部内容。
 
-*(注：控制台若出现过时 API 警告或红字报错请忽略，不影响核心的字体生成和打包功能。)*
+*(注：控制台若出现红字报错请忽略，不影响核心的字体生成和打包功能。)*
 
 ### 2. 生成字体
 1. 准备好你的字体文件（`.ttf` 或 `.otf`），拖入 Unity 项目。
@@ -35,10 +35,65 @@
 
 ### 3. 一键打包 AssetBundle
 包内已附带了一键打包工具脚本，操作非常便捷：
-1. **统一 HashCode**：为了在游戏内能通过 `<font="自定义名字">` 标签正确调用，请在打包前将生成的 `.asset` 字体文件**重命名**为你打算在代码中使用的准确名称（例如 `SSZY SDF`）。
+1. **统一 HashCode**：为了在游戏内能通过 `<font="xxx SDF"></font>` 标签正确调用，请在打包前将生成的 `.asset` 字体文件**重命名**为你打算在代码中使用的准确名称（例如 `xxx SDF`）。
 2. 选中该字体文件，在 Inspector 面板最下方的 **AssetBundle** 选项中，点击下拉菜单 `New...`，为其分配一个包名（例如 `testsdf`）。
 3. 在 Unity 顶部菜单栏点击 **`AssetBundle -> Build AssetBundle`**。
 4. 等待进度条跑完后，系统会自动打开项目目录下的 `StreamingAssets` 文件夹，你刚才打包好的 AssetBundle 文件就在里面。
+
+### 4. 在 Mod 中加载 AssetBundle 中的 SDF 字体
+
+推荐将打包好的 AssetBundle 文件放在根目录并在 Visual Studio 项目属性中设置为 **“嵌入的资源” (Embedded Resource)** ，以便单文件发布 Mod。
+随后，你可以通过读取内存流的方式加载 AssetBundle，并提取、注册其中的字体。具体实现代码示例如下：
+
+```csharp
+// 1. 读取嵌入资源并加载 AssetBundle 的核心方法
+public static AssetBundle GetAssetBundle(Assembly assembly, string name)
+{
+    var logger = BepInEx.Logging.Logger.CreateLogSource("CNText");
+    try
+    {
+        using Stream stream = assembly.GetManifestResourceStream(assembly.FullName!.Split(',')[0] + "." + name) ?? assembly.GetManifestResourceStream(name)!;
+        using MemoryStream stream1 = new();
+        
+        stream.CopyTo(stream1); // 使用下方的扩展方法将流转存到内存中
+        
+        var ab = AssetBundle.LoadFromMemory(stream1.ToArray());
+        logger.LogInfo($"加载 AssetBundle {name} 成功.");
+        return ab;
+    }
+    catch (Exception e)
+    {
+        logger.LogError(e.Source);
+        logger.LogError($"加载 AssetBundle {name} 失败：\n{e}");
+        return null;
+    }
+}
+
+// 必要的 Stream 扩展方法
+public static void CopyTo(this Stream source, Stream destination, int bufferSize = 81920)
+{
+    byte[] array = new byte[bufferSize];
+    int count;
+    while ((count = source.Read(array, 0, array.Length)) != 0)
+    {
+        destination.Write(array, 0, count);
+    }
+}
+```
+
+在插件初始化（如 `Awake`）时调用加载与注册逻辑：
+
+```csharp
+// 2. 提取并注册 TextMeshPro 字体
+// 获取刚才嵌入并加载好的 AssetBundle (假设包名为 testsdf)
+var ab_sdf = GetAssetBundle(Assembly.GetExecutingAssembly(), "testsdf");
+
+// 提取里面的字体资产 (假设生成字体时重命名的资产叫 Test SDF)
+TMP_FontAsset sdf = ab_sdf.LoadAsset<TMP_FontAsset>("Test SDF");
+
+// 将其加入 TMP 的底层引用管理器中，此后 <font=Test SDF></font> 标签即可正常工作
+MaterialReferenceManager.AddFontAsset(sdf);
+```
 
 ---
 
