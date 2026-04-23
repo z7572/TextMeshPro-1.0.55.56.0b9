@@ -2,6 +2,10 @@
 
 适用于 Unity 5.6.3p4 的 TextMeshPro 1.0.55.56.0b9 版本，专用于 Stick Fight: The Game 游戏内 SDF 字体的构建。
 
+> **2026.4.19 更新：找到了一个[适配 Unity 5.x 的tmp](https://www.aigei.com/item/textmesh_pro.html)， 版本1.0.55.52.0b3**
+> 
+> 如果有时间的话会去进一步适配，这意味着不用专门安装以及引用 Unity 2017.3 的dll，只需从 Unity 5.6.3p4 里抠出来 dll 就能用
+
 源代码由一个相近的版本 [TextMeshPro 1.0.56.2017.3.0b2](https://archive.org/details/text-mesh-pro-release-1.0.56.2017.3.0b-2-dll-only)（适用于 Unity 2017.3）反编译并还原为 Visual Studio 工程后，修改程序集名称重新编译而强行适配，因此可能会在 Unity 5.6.3p4 中报一些错。
 
 用此 TMP 包构建的字体以及生成的 AssetBundle 可被加载进柴游中，~~实现 Unity 5.6 强兼 Unity 2017.3 。~~
